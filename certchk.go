@@ -40,6 +40,7 @@ import (
 var (
 	dialer = &net.Dialer{Timeout: 5 * time.Second}
 	file   = flag.String("f", "", "read server names from `file`")
+	batch  = flag.Bool("batch", false, "batch output")
 )
 
 func check(server string, width int) {
@@ -53,8 +54,12 @@ func check(server string, width int) {
 
 	for _, c := range conn.ConnectionState().PeerCertificates {
 		if valid == nil {
-			fmt.Printf("%*s | valid, expires on %s (%s)\n", width, server,
-				c.NotAfter.Format("2006-01-02"), humanize.Time(c.NotAfter))
+			if *batch {
+				fmt.Printf("%v\t%v\n", server, int(time.Until(c.NotAfter).Hours()))
+			} else {
+				fmt.Printf("%*s | valid, expires on %s (%s)\n", width, server,
+					c.NotAfter.Format("2006-01-02"), humanize.Time(c.NotAfter))
+			}
 		} else {
 			fmt.Printf("%*s | %v\n", width, server, valid)
 		}
@@ -83,8 +88,10 @@ func main() {
 	}
 
 	// actually check
-	fmt.Printf("%*s | Certificate status\n%s-+-%s\n", width, "Server",
-		strings.Repeat("-", width), strings.Repeat("-", 80-width-2))
+	if !*batch {
+		fmt.Printf("%*s | Certificate status\n%s-+-%s\n", width, "Server",
+			strings.Repeat("-", width), strings.Repeat("-", 80-width-2))
+	}
 	for _, name := range names {
 		check(name, width)
 	}
